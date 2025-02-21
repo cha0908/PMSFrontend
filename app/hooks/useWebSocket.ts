@@ -1,7 +1,7 @@
+"use client"
 import { useEffect, useRef } from 'react';
-import { Client, Frame } from '@stomp/stompjs';
 import { Positions } from '../types/position';
-import SockJS from 'sockjs-client';
+import { Client, Frame } from '@stomp/stompjs';
 
 interface UseWebSocketProps {
   setPositions: (positions: Positions) => void;
@@ -34,42 +34,58 @@ export const useWebSocket = ({ setPositions, setIsLoading }: UseWebSocketProps) 
   const stompClient = useRef<Client | null>(null);
 
   useEffect(() => {
-    stompClient.current = new Client({
-      brokerURL: 'ws://localhost:8083/positions',
-      connectHeaders: {},
-      debug: (str) => {
-        console.log('STOMP: ' + str);
-      },
-      reconnectDelay: 5000,
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000,
-    });
+    const initWebSocket = setTimeout(() => {
+      try {
+        console.log('Initializing STOMP WebSocket connection...');
+        
+        stompClient.current = new Client({
+          brokerURL: 'ws://localhost:8083/positions',
+          debug: (str) => {
+            console.log('STOMP Debug:', str);
+          },
+          onConnect: (frame: Frame | undefined) => {
+            console.log('Connected to STOMP:', frame);
+            
+            stompClient.current?.subscribe('/topic/positions', (message) => {
+              try {
+                console.log('Raw message received:', message.body);
+                const positions = JSON.parse(message.body);
+                console.log('Parsed positions:', positions);
+                setPositions(positions);
+                setIsLoading(false);
+              } catch (parseError) {
+                console.error('Error parsing message:', parseError);
+              }
+            });
+          },
+          onStompError: (frame) => {
+            console.error('STOMP error:', frame);
+          },
+          onWebSocketError: (error) => {
+            console.error('WebSocket error:', error);
+            if (stompClient.current?.webSocket) {
+              console.log('WebSocket state:', {
+                url: stompClient.current.webSocket.url,
+                readyState: stompClient.current.webSocket.readyState
+              });
+            }
+          }
+        });
 
-    stompClient.current.onConnect = () => {
-      console.log('Connected to STOMP');
-      
-      stompClient.current?.subscribe('/topic/positions', (message) => {
-        if (message.body) {
-          console.log('Received message:', message.body);
-          const positions = JSON.parse(message.body);
-          setPositions(positions);
-          setIsLoading(false);
-        }
-      });
-    };
-
-    stompClient.current.onStompError = (frame) => {
-      console.error('STOMP error:', frame);
-    };
-
-    stompClient.current.activate();
+        stompClient.current.activate();
+        
+      } catch (error) {
+        console.error('Error in STOMP setup:', error);
+      }
+    }, 1000);
 
     return () => {
+      clearTimeout(initWebSocket);
       if (stompClient.current?.active) {
         stompClient.current.deactivate();
       }
     };
-  }, []);
+  }, [setPositions, setIsLoading]);
 
   return stompClient.current;
 }; 
