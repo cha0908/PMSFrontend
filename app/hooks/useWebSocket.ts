@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Client, Frame } from '@stomp/stompjs';
 import { Positions } from '../types/position';
+import SockJS from 'sockjs-client';
 
 interface UseWebSocketProps {
   setPositions: (positions: Positions) => void;
@@ -33,21 +34,23 @@ export const useWebSocket = ({ setPositions, setIsLoading }: UseWebSocketProps) 
   const stompClient = useRef<Client | null>(null);
 
   useEffect(() => {
-    // Create STOMP client
     stompClient.current = new Client({
-      brokerURL: 'ws://localhost:8083/positions', // Match your backend endpoint
+      brokerURL: 'ws://localhost:8083/positions',
+      connectHeaders: {},
+      debug: (str) => {
+        console.log('STOMP: ' + str);
+      },
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
     });
 
-    // Handle connection
-    stompClient.current.onConnect = (frame: Frame | undefined) => {
-      console.log('Connected to STOMP:', frame);
+    stompClient.current.onConnect = () => {
+      console.log('Connected to STOMP');
       
-      // Subscribe to position updates from backend
       stompClient.current?.subscribe('/topic/positions', (message) => {
         if (message.body) {
+          console.log('Received message:', message.body);
           const positions = JSON.parse(message.body);
           setPositions(positions);
           setIsLoading(false);
@@ -55,10 +58,12 @@ export const useWebSocket = ({ setPositions, setIsLoading }: UseWebSocketProps) 
       });
     };
 
-    // Activate connection
+    stompClient.current.onStompError = (frame) => {
+      console.error('STOMP error:', frame);
+    };
+
     stompClient.current.activate();
 
-    // Cleanup on unmount
     return () => {
       if (stompClient.current?.active) {
         stompClient.current.deactivate();
