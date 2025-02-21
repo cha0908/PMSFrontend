@@ -8,27 +8,6 @@ interface UseWebSocketProps {
   setIsLoading: (loading: boolean) => void;
 }
 
-// Mock data
-const mockPositions = {
-  'P001': {
-    PositionID: 'P001',
-    Symbol: 'AAPL',
-    Qty: 100,
-    AverageCost: 150.50,
-    UnrealizedPnL: 500.00,
-    Currency: 'USD',
-    CurrentPrice: 155.50
-  },
-  'P002': {
-    PositionID: 'P002',
-    Symbol: 'GOOGL',
-    Qty: 50,
-    AverageCost: 2800.00,
-    UnrealizedPnL: -200.00,
-    Currency: 'USD',
-    CurrentPrice: 2796.00
-  }
-};
 
 export const useWebSocket = ({ setPositions, setIsLoading }: UseWebSocketProps) => {
   const stompClient = useRef<Client | null>(null);
@@ -45,18 +24,28 @@ export const useWebSocket = ({ setPositions, setIsLoading }: UseWebSocketProps) 
           },
           onConnect: (frame: Frame | undefined) => {
             console.log('Connected to STOMP:', frame);
+            console.log('Attempting to subscribe to /positionData...');
             
-            stompClient.current?.subscribe('/topic/positions', (message) => {
+            stompClient.current?.subscribe('/topic/positionData', (message) => {
+              console.log('Message received on /positionData');
               try {
                 console.log('Raw message received:', message.body);
-                const positions = JSON.parse(message.body);
-                console.log('Parsed positions:', positions);
-                setPositions(positions);
-                setIsLoading(false);
+                const data = JSON.parse(message.body);
+                console.log('Parsed data:', data);
+                
+                // Validate the data structure
+                if (data && typeof data === 'object') {
+                  setPositions(data);
+                  setIsLoading(false);
+                } else {
+                  console.error('Invalid data structure received:', data);
+                }
               } catch (parseError) {
                 console.error('Error parsing message:', parseError);
               }
             });
+            
+            console.log('Subscription complete');
           },
           onStompError: (frame) => {
             console.error('STOMP error:', frame);

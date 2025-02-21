@@ -1,13 +1,13 @@
 export interface Position {
-  PositionID: string;
-  Symbol: string;
-  Qty: number;
-  AverageCost: number;
-  UnrealizedPnL: number;
-  Currency: string;
-  CurrentPrice: number;
+  positionId: string;
+  ticker: string;
+  totalQty: string;
+  avgPrice: string;
+  unrealizedPnl: string;
+  currency: string;
+  lastPrice: string;
 }
 
 export interface Positions {
-  [key: string]: Position;
+  positionData: Position[];
 } 
