@@ -14,6 +14,19 @@ import 'ag-grid-community/styles/ag-theme-alpine.css';
 // Add this before your component
 provideGlobalGridOptions({ theme: 'legacy' });
 
+// Add these CSS overrides after your other imports
+const gridThemeOverrides = `
+  .ag-theme-alpine-dark {
+    --ag-background-color: rgba(255, 255, 255, 0.1);
+    --ag-header-background-color: rgba(255, 255, 255, 0.15);
+    --ag-odd-row-background-color: rgba(255, 255, 255, 0.05);
+    --ag-header-foreground-color: #fff;
+    --ag-foreground-color: #fff;
+    --ag-border-color: rgba(255, 255, 255, 0.1);
+    --ag-row-hover-color: rgba(255, 255, 255, 0.2);
+  }
+`;
+
 export default function Home() {
   const { user } = useAuth();
   const [positions, setPositions] = useState<Positions>({ positionData: [] });
@@ -104,6 +117,7 @@ export default function Home() {
           )}
         </div>
       </main>
+      <style jsx global>{gridThemeOverrides}</style>
     </div>
   );
 }
